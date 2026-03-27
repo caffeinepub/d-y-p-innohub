@@ -95,17 +95,22 @@ export default function Footer() {
             </ul>
           </div>
         </div>
-        <div className="border-t border-white/10 pt-6 text-center text-xs text-white/40">
-          &copy; {year} D.Y.Patil Pratishtan's College of Engineering. Built
-          with ❤️ using{" "}
-          <a
-            href={`https://caffeine.ai?utm_source=caffeine-footer&utm_medium=referral&utm_content=${utm}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="underline hover:text-white/70 transition-colors"
-          >
-            caffeine.ai
-          </a>
+        <div className="border-t border-white/10 pt-6 text-center">
+          <p className="text-xs text-white/40">
+            &copy; {year} D.Y.Patil Pratishtan's College of Engineering. Built
+            with ❤️ using{" "}
+            <a
+              href={`https://caffeine.ai?utm_source=caffeine-footer&utm_medium=referral&utm_content=${utm}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline hover:text-white/70 transition-colors"
+            >
+              caffeine.ai
+            </a>
+          </p>
+          <p className="text-xs text-white/50 mt-1">
+            Created by Rushiraj Amrutraj Desai
+          </p>
         </div>
       </div>
     </footer>
