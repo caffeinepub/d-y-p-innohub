@@ -1,0 +1,68 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@font-face {
+  font-family: "Plus Jakarta Sans";
+  src: url("/assets/fonts/PlusJakartaSans.woff2") format("woff2");
+  font-weight: 300 700;
+  font-display: swap;
+}
+
+@layer base {
+  :root {
+    --radius: 0.75rem;
+    /* Deep navy bg for header */
+    --navy: 0.18 0.04 240;
+    --navy-light: 0.26 0.06 230;
+    /* Page bg light gray */
+    --background: 0.97 0.005 240 / 0;
+    --foreground: 0.22 0.025 255;
+    --card: 1 0 0 / 0.72;
+    --card-foreground: 0.22 0.025 255;
+    --popover: 1 0 0;
+    --popover-foreground: 0.22 0.025 255;
+    /* Teal primary */
+    --primary: 0.68 0.12 185;
+    --primary-foreground: 1 0 0;
+    /* Peach secondary */
+    --secondary: 0.82 0.1 55;
+    --secondary-foreground: 0.22 0.025 255;
+    --muted: 0.94 0.005 240;
+    --muted-foreground: 0.55 0.01 255;
+    --accent: 0.94 0.01 185;
+    --accent-foreground: 0.22 0.025 255;
+    --destructive: 0.577 0.245 27.325;
+    --destructive-foreground: 0.985 0 0;
+    --border: 0.92 0.005 255;
+    --input: 0.92 0.005 255;
+    --ring: 0.68 0.12 185;
+    --chart-1: 0.68 0.12 185;
+    --chart-2: 0.82 0.1 55;
+    --chart-3: 0.646 0.222 41.116;
+    --chart-4: 0.6 0.118 184.704;
+    --chart-5: 0.769 0.188 70.08;
+    --sidebar: 0.985 0 0;
+    --sidebar-foreground: 0.22 0.025 255;
+    --sidebar-primary: 0.68 0.12 185;
+    --sidebar-primary-foreground: 1 0 0;
+    --sidebar-accent: 0.94 0.01 185;
+    --sidebar-accent-foreground: 0.22 0.025 255;
+    --sidebar-border: 0.92 0.005 255;
+    --sidebar-ring: 0.68 0.12 185;
+  }
+
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply text-foreground;
+    font-family: "Plus Jakarta Sans", "Inter", sans-serif;
+    background-image: url("/assets/uploads/chatgpt_image_mar_27_2026_06_59_51_pm-019d2fd7-8629-761d-9393-83050392296c-1.png");
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+    background-repeat: no-repeat;
+    background-color: oklch(0.96 0.005 240);
+  }
+}
