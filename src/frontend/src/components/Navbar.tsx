@@ -49,7 +49,7 @@ export default function Navbar() {
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2" data-ocid="nav.link">
             <img
-              src="/assets/generated/innohub-logo-transparent.dim_80x80.png"
+              src="/assets/uploads/download-019d3282-4145-705a-af2b-7e334c572e99-2.png"
               alt="D.Y.P.InnoHub Logo"
               className="w-10 h-10 object-contain"
             />
