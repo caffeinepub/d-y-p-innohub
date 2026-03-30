@@ -52,22 +52,47 @@ actor {
     totalLikes : Nat;
   };
 
-  // Persistent data structures
-  var nextProjectId = 1;
-  var nextCommentId = 1;
+  // Stable storage for persistence across upgrades
+  stable var stableNextProjectId : Nat = 1;
+  stable var stableNextCommentId : Nat = 1;
+  stable var stableProjects : [(ProjectId, Project)] = [];
+  stable var stableComments : [(CommentId, Comment)] = [];
+  stable var stableUserProfiles : [(Principal, UserProfile)] = [];
+
+  // In-memory working maps
+  var nextProjectId = stableNextProjectId;
+  var nextCommentId = stableNextCommentId;
 
   let projects = Map.empty<ProjectId, Project>();
   let comments = Map.empty<CommentId, Comment>();
   let userProfiles = Map.empty<Principal, UserProfile>();
 
+  // Restore data from stable storage on startup
+  do {
+    for ((k, v) in stableProjects.vals()) {
+      projects.add(k, v);
+    };
+    for ((k, v) in stableComments.vals()) {
+      comments.add(k, v);
+    };
+    for ((k, v) in stableUserProfiles.vals()) {
+      userProfiles.add(k, v);
+    };
+  };
+
+  // Save data to stable storage before upgrade
+  system func preupgrade() {
+    stableNextProjectId := nextProjectId;
+    stableNextCommentId := nextCommentId;
+    stableProjects := projects.entries().toArray();
+    stableComments := comments.entries().toArray();
+    stableUserProfiles := userProfiles.entries().toArray();
+  };
+
   // Project Management
   public shared ({ caller }) func createProject(title : Text, description : Text, tags : [Text], category : Text, innovationSummary : Text, fileBlobIds : [Text], authorName : Text) : async Project {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only users can create projects");
-    };
-
-    if (title == "" or description == "" or category == "" or authorName == "") {
-      Runtime.trap("Missing required fields");
     };
 
     let project : Project = {
@@ -146,8 +171,7 @@ actor {
 
   // Data retrieval
   public query ({ caller }) func getProjects(category : ?Text, searchQuery : ?Text) : async [Project] {
-    let filtered = projects.values().filter(func(p) { true }).toArray();
-    filtered;
+    projects.values().filter(func(p) { true }).toArray();
   };
 
   public query ({ caller }) func getProject(id : ProjectId) : async Project {
