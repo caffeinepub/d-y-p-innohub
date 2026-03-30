@@ -9,7 +9,6 @@ import { Camera, Edit2, Save } from "lucide-react";
 import { motion } from "motion/react";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
-import type { UserProfile } from "../backend.d";
 import ProjectCard from "../components/ProjectCard";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
 import {
@@ -83,18 +82,12 @@ export default function ProfilePage() {
       return;
     }
     try {
-      const updated: UserProfile = {
-        displayName: name.trim(),
-        bio: bio.trim(),
-        principal: identity.getPrincipal(),
-        totalLikes: profile?.totalLikes ?? BigInt(0),
-        projectCount: profile?.projectCount ?? BigInt(0),
-      };
-      await saveProfile(updated);
+      await saveProfile({ displayName: name.trim(), bio: bio.trim() });
       setEditing(false);
       toast.success("Profile updated!");
-    } catch {
-      toast.error("Failed to update profile");
+    } catch (err) {
+      console.error("Profile save error:", err);
+      toast.error("Failed to update profile. Please try again.");
     }
   };
 
@@ -117,7 +110,7 @@ export default function ProfilePage() {
           />
           <div className="px-6 pb-6">
             <div className="flex items-end gap-4 -mt-10 mb-4">
-              {/* Clickable Avatar with camera overlay — use label for file input */}
+              {/* Clickable Avatar with camera overlay */}
               <label
                 htmlFor="profile-photo-input"
                 className="relative group cursor-pointer"

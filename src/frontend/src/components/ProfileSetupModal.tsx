@@ -10,31 +10,21 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useState } from "react";
 import { toast } from "sonner";
-import type { UserProfile } from "../backend.d";
-import { useInternetIdentity } from "../hooks/useInternetIdentity";
 import { useSaveUserProfile } from "../hooks/useQueries";
 
 export default function ProfileSetupModal() {
-  const { identity } = useInternetIdentity();
   const [name, setName] = useState("");
   const [bio, setBio] = useState("");
   const { mutateAsync, isPending } = useSaveUserProfile();
 
   const handleSave = async () => {
     if (!name.trim()) return;
-    if (!identity) return;
     try {
-      const profile: UserProfile = {
-        displayName: name.trim(),
-        bio: bio.trim(),
-        principal: identity.getPrincipal(),
-        totalLikes: BigInt(0),
-        projectCount: BigInt(0),
-      };
-      await mutateAsync(profile);
+      await mutateAsync({ displayName: name.trim(), bio: bio.trim() });
       toast.success("Profile saved!");
-    } catch {
-      toast.error("Failed to save profile");
+    } catch (err) {
+      console.error("Profile setup error:", err);
+      toast.error("Failed to save profile. Please try again.");
     }
   };
 
@@ -42,7 +32,7 @@ export default function ProfileSetupModal() {
     <Dialog open>
       <DialogContent className="sm:max-w-md" data-ocid="profile_setup.dialog">
         <DialogHeader>
-          <DialogTitle>Welcome to EduProjectHub!</DialogTitle>
+          <DialogTitle>Welcome to D.Y.P.InnoHub!</DialogTitle>
         </DialogHeader>
         <p className="text-muted-foreground text-sm">
           Set up your profile to get started sharing projects.

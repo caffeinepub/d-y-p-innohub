@@ -171,16 +171,21 @@ export function useCreateProject() {
   });
 }
 
+// Uses the simpler updateUserProfile backend function (displayName + bio only)
 export function useSaveUserProfile() {
   const { actor } = useActor();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (profile: UserProfile) => {
+    mutationFn: async ({
+      displayName,
+      bio,
+    }: { displayName: string; bio: string }) => {
       if (!actor) throw new Error("Not authenticated");
-      return actor.saveCallerUserProfile(profile);
+      return actor.updateUserProfile(displayName, bio);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["currentUserProfile"] });
+      qc.refetchQueries({ queryKey: ["currentUserProfile"] });
     },
   });
 }
