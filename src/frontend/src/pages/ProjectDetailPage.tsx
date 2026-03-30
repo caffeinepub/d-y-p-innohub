@@ -13,7 +13,7 @@ import {
   Send,
 } from "lucide-react";
 import { motion } from "motion/react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
 import {
@@ -23,6 +23,57 @@ import {
   useGetProjectComments,
   useLikeProject,
 } from "../hooks/useQueries";
+import { useStorageClient } from "../hooks/useStorageClient";
+
+function ProjectImageGallery({
+  hashes,
+  getImageURL,
+}: {
+  hashes: string[];
+  getImageURL: (hash: string) => Promise<string>;
+}) {
+  const [urls, setUrls] = useState<string[]>([]);
+
+  useEffect(() => {
+    Promise.all(hashes.map((h) => getImageURL(h).catch(() => ""))).then(
+      setUrls,
+    );
+  }, [hashes, getImageURL]);
+
+  if (urls.length === 0) {
+    return (
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
+        {hashes.map((h) => (
+          <div
+            key={h}
+            className="rounded-xl overflow-hidden animate-pulse bg-gray-200"
+            style={{ aspectRatio: "16/9" }}
+          />
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
+      {urls.map((url, i) =>
+        url ? (
+          <div
+            key={hashes[i]}
+            className="rounded-xl overflow-hidden border border-gray-100 shadow-sm"
+            style={{ aspectRatio: "16/9" }}
+          >
+            <img
+              src={url}
+              alt={`Project view ${i + 1}`}
+              className="w-full h-full object-cover"
+            />
+          </div>
+        ) : null,
+      )}
+    </div>
+  );
+}
 
 export default function ProjectDetailPage() {
   const { id } = useParams({ from: "/project/$id" });
@@ -30,6 +81,7 @@ export default function ProjectDetailPage() {
   const { identity } = useInternetIdentity();
   const { data: profile } = useGetCallerUserProfile();
   const projectId = BigInt(id);
+  const { getImageURL } = useStorageClient();
 
   const { data: project, isLoading } = useGetProject(projectId);
   const { data: comments, isLoading: commentsLoading } =
@@ -100,6 +152,10 @@ export default function ProjectDetailPage() {
       </div>
     );
   }
+
+  const realHashes = project.fileBlobIds.filter((blobId) =>
+    blobId.startsWith("sha256:"),
+  );
 
   return (
     <motion.div
@@ -186,6 +242,22 @@ export default function ProjectDetailPage() {
               </Badge>
             ))}
           </div>
+
+          {/* Image Gallery */}
+          {realHashes.length > 0 && (
+            <div className="mb-6">
+              <h3 className="font-semibold text-foreground mb-3 flex items-center gap-2">
+                🖼️ Project Gallery
+                <span className="text-xs text-muted-foreground font-normal">
+                  ({realHashes.length})
+                </span>
+              </h3>
+              <ProjectImageGallery
+                hashes={realHashes}
+                getImageURL={getImageURL}
+              />
+            </div>
+          )}
 
           <div
             className="rounded-xl p-4 mb-5"

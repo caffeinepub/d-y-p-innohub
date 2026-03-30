@@ -3,7 +3,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "@tanstack/react-router";
 import { Eye, Heart, MessageSquare } from "lucide-react";
+import { useEffect, useState } from "react";
 import type { Project } from "../backend.d";
+import { useStorageClient } from "../hooks/useStorageClient";
 
 const CATEGORY_GRADIENTS: Record<string, string> = {
   Technology:
@@ -20,6 +22,38 @@ const CATEGORY_GRADIENTS: Record<string, string> = {
     "linear-gradient(135deg, oklch(0.35 0.06 240 / 0.85), oklch(0.5 0.1 200 / 0.85))",
 };
 
+interface ThumbnailProps {
+  hash: string;
+  getImageURL: (hash: string) => Promise<string>;
+}
+
+function ProjectImageThumbnail({ hash, getImageURL }: ThumbnailProps) {
+  const [url, setUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    getImageURL(hash)
+      .then(setUrl)
+      .catch(() => {});
+  }, [hash, getImageURL]);
+
+  return (
+    <div
+      className="w-full overflow-hidden"
+      style={{ height: 100, background: "oklch(0.92 0.01 240)" }}
+    >
+      {url ? (
+        <img
+          src={url}
+          alt="Project thumbnail"
+          className="w-full h-full object-cover"
+        />
+      ) : (
+        <div className="w-full h-full animate-pulse bg-gray-200" />
+      )}
+    </div>
+  );
+}
+
 interface Props {
   project: Project;
   index: number;
@@ -27,8 +61,13 @@ interface Props {
 
 export default function ProjectCard({ project, index }: Props) {
   const navigate = useNavigate();
+  const { getImageURL } = useStorageClient();
   const gradient =
     CATEGORY_GRADIENTS[project.category] ?? CATEGORY_GRADIENTS.Other;
+
+  const firstRealHash = project.fileBlobIds.find((id) =>
+    id.startsWith("sha256:"),
+  );
 
   return (
     <article
@@ -40,16 +79,32 @@ export default function ProjectCard({ project, index }: Props) {
       }}
       data-ocid={`projects.item.${index}`}
     >
-      <div
-        className="h-16 flex items-center justify-center relative"
-        style={{ background: gradient }}
-      >
-        <span className="text-white/80 text-[10px] font-semibold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-black/20">
-          {project.category}
-        </span>
-      </div>
+      {firstRealHash ? (
+        <ProjectImageThumbnail hash={firstRealHash} getImageURL={getImageURL} />
+      ) : (
+        <div
+          className="h-16 flex items-center justify-center relative"
+          style={{ background: gradient }}
+        >
+          <span className="text-white/80 text-[10px] font-semibold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-black/20">
+            {project.category}
+          </span>
+        </div>
+      )}
 
       <div className="p-3 flex flex-col flex-1 gap-2">
+        {firstRealHash && (
+          <span
+            className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full self-start"
+            style={{
+              background: gradient,
+              color: "white",
+            }}
+          >
+            {project.category}
+          </span>
+        )}
+
         <div className="flex items-center gap-1.5">
           <Avatar className="w-5 h-5">
             <AvatarFallback className="bg-primary/20 text-primary text-[9px]">

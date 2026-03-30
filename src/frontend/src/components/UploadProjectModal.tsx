@@ -15,11 +15,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Upload, X } from "lucide-react";
-import { useRef, useState } from "react";
+import { ImagePlus, Loader2, X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { ExternalBlob } from "../backend";
 import { useCreateProject, useGetCallerUserProfile } from "../hooks/useQueries";
+import { useStorageClient } from "../hooks/useStorageClient";
 
 const CATEGORIES = [
   "Technology",
@@ -30,6 +30,8 @@ const CATEGORIES = [
   "Other",
 ];
 
+const MAX_IMAGES = 10;
+
 interface Props {
   open: boolean;
   onClose: () => void;
@@ -38,17 +40,55 @@ interface Props {
 export default function UploadProjectModal({ open, onClose }: Props) {
   const { data: profile } = useGetCallerUserProfile();
   const { mutateAsync, isPending } = useCreateProject();
+  const { uploadImages } = useStorageClient();
+
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState("");
   const [tags, setTags] = useState("");
   const [innovationSummary, setInnovationSummary] = useState("");
   const [description, setDescription] = useState("");
-  const [files, setFiles] = useState<File[]>([]);
+  const [images, setImages] = useState<File[]>([]);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [uploadProgress, setUploadProgress] = useState(0);
   const fileRef = useRef<HTMLInputElement>(null);
+  // Keep a ref to current previews for cleanup on unmount
+  const imagePreviewsRef = useRef<string[]>([]);
+  imagePreviewsRef.current = imagePreviews;
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) setFiles(Array.from(e.target.files));
+  // Cleanup object URLs on unmount
+  useEffect(() => {
+    return () => {
+      for (const url of imagePreviewsRef.current) {
+        URL.revokeObjectURL(url);
+      }
+    };
+  }, []);
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files) return;
+    const selected = Array.from(e.target.files);
+    const combined = [...images, ...selected];
+    if (combined.length > MAX_IMAGES) {
+      toast.warning(
+        `Maximum ${MAX_IMAGES} images allowed. Taking first ${MAX_IMAGES}.`,
+      );
+    }
+    const capped = combined.slice(0, MAX_IMAGES);
+    // Revoke old previews
+    for (const url of imagePreviews) {
+      URL.revokeObjectURL(url);
+    }
+    const newPreviews = capped.map((f) => URL.createObjectURL(f));
+    setImages(capped);
+    setImagePreviews(newPreviews);
+    // Reset input value so same files can be added again if removed
+    if (fileRef.current) fileRef.current.value = "";
+  };
+
+  const removeImage = (idx: number) => {
+    URL.revokeObjectURL(imagePreviews[idx]);
+    setImages(images.filter((_, i) => i !== idx));
+    setImagePreviews(imagePreviews.filter((_, i) => i !== idx));
   };
 
   const handleSubmit = async () => {
@@ -57,17 +97,9 @@ export default function UploadProjectModal({ open, onClose }: Props) {
       return;
     }
     try {
-      const fileBlobIds: string[] = [];
-      let totalProgress = 0;
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        const bytes = new Uint8Array(await file.arrayBuffer());
-        const blob = ExternalBlob.fromBytes(bytes).withUploadProgress((p) => {
-          totalProgress = Math.round(((i + p / 100) / files.length) * 100);
-          setUploadProgress(totalProgress);
-        });
-        const blobBytes = await blob.getBytes();
-        fileBlobIds.push(btoa(String.fromCharCode(...blobBytes.slice(0, 32))));
+      let fileBlobIds: string[] = [];
+      if (images.length > 0) {
+        fileBlobIds = await uploadImages(images, setUploadProgress);
       }
       await mutateAsync({
         title: title.trim(),
@@ -82,6 +114,13 @@ export default function UploadProjectModal({ open, onClose }: Props) {
         authorName: profile?.displayName || "Anonymous",
       });
       toast.success("Project uploaded successfully!");
+      // Cleanup previews
+      for (const url of imagePreviews) {
+        URL.revokeObjectURL(url);
+      }
+      setImages([]);
+      setImagePreviews([]);
+      setUploadProgress(0);
       onClose();
     } catch (e: any) {
       toast.error(e?.message || "Upload failed");
@@ -179,48 +218,68 @@ export default function UploadProjectModal({ open, onClose }: Props) {
             />
           </div>
 
-          <div className="space-y-1.5">
-            <Label className="text-gray-800 font-medium">
-              Attachments (images, documents)
-            </Label>
+          {/* Image Upload Section */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label className="text-gray-800 font-medium">
+                Project Images (up to 10)
+              </Label>
+              <span className="text-xs text-gray-500 font-medium">
+                {images.length} / {MAX_IMAGES} images selected
+              </span>
+            </div>
+
             <button
               type="button"
-              className="w-full border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer hover:border-blue-500 transition-colors bg-gray-50"
+              className="w-full border-2 border-dashed border-gray-300 rounded-lg p-5 text-center cursor-pointer hover:border-blue-500 transition-colors bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
               onClick={() => fileRef.current?.click()}
+              disabled={images.length >= MAX_IMAGES}
               data-ocid="upload.dropzone"
             >
-              <Upload className="w-8 h-8 mx-auto mb-2 text-gray-600" />
-              <p className="text-sm text-gray-600">
-                {files.length > 0
-                  ? files.map((f) => f.name).join(", ")
-                  : "Click to upload files"}
+              <ImagePlus className="w-7 h-7 mx-auto mb-1.5 text-gray-500" />
+              <p className="text-sm text-gray-600 font-medium">
+                {images.length >= MAX_IMAGES
+                  ? "Maximum images reached"
+                  : "Click to add images"}
+              </p>
+              <p className="text-xs text-gray-400 mt-0.5">
+                PNG, JPG, GIF, WEBP accepted
               </p>
               <input
                 ref={fileRef}
                 type="file"
                 multiple
+                accept="image/*"
                 className="hidden"
-                onChange={handleFileChange}
+                onChange={handleImageChange}
               />
             </button>
-            {files.length > 0 && (
-              <div className="flex flex-wrap gap-1">
-                {files.map((f) => (
-                  <span
-                    key={f.name}
-                    className="flex items-center gap-1 text-xs bg-gray-100 text-gray-800 px-2 py-1 rounded-full"
+
+            {imagePreviews.length > 0 && (
+              <div className="grid grid-cols-5 gap-2 mt-2">
+                {imagePreviews.map((src, idx) => (
+                  <div
+                    key={src}
+                    className="relative group rounded-lg overflow-hidden border border-gray-200"
+                    style={{ height: 80 }}
                   >
-                    {f.name}
+                    <img
+                      src={src}
+                      alt={`Preview ${idx + 1}`}
+                      className="w-full h-full object-cover"
+                    />
                     <button
                       type="button"
-                      onClick={() =>
-                        setFiles(files.filter((fl) => fl.name !== f.name))
-                      }
-                      className="ml-1 hover:text-red-500"
+                      onClick={() => removeImage(idx)}
+                      className="absolute top-0.5 right-0.5 bg-black/60 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                      data-ocid={`upload.delete_button.${idx + 1}`}
                     >
                       <X className="w-3 h-3" />
                     </button>
-                  </span>
+                    <div className="absolute bottom-0 left-0 right-0 bg-black/40 text-white text-[9px] text-center py-0.5">
+                      {idx + 1}
+                    </div>
+                  </div>
                 ))}
               </div>
             )}
